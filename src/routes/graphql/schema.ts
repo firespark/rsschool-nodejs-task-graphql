@@ -7,7 +7,8 @@ import {
     GraphQLEnumType,
     GraphQLFloat,
     GraphQLList,
-    GraphQLInputObjectType
+    GraphQLInputObjectType,
+    GraphQLSchema
 } from 'graphql';
 import { UUIDType } from './types/uuid.js';
 import { MemberTypeId } from '../member-types/schemas.js';
@@ -317,4 +318,9 @@ const RootQuery = new GraphQLObjectType({
             },
         },
     },
+});
+
+export const schema = new GraphQLSchema({
+    query: RootQuery,
+    mutation: Mutation,
 });
