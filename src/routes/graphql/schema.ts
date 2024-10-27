@@ -252,9 +252,38 @@ const Mutation = new GraphQLObjectType({
                 userId: { type: new GraphQLNonNull(UUIDType) },
                 authorId: { type: new GraphQLNonNull(UUIDType) },
             },
-            resolve(parent, args, { prisma }) {
-                //TODO
-            },
+            async resolve(parent, args, { prisma }) {
+                const { userId, authorId } = args;
+            
+                const user = await prisma.user.findUnique({ where: { id: userId } });
+                const author = await prisma.user.findUnique({ where: { id: authorId } });
+            
+                if (!user || !author) {
+                  throw new Error('User or Author not found');
+                }
+
+                const existingSubscription = await prisma.subscribersOnAuthors.findUnique({
+                  where: {
+                    subscriberId_authorId: {
+                      subscriberId: userId,
+                      authorId: authorId,
+                    },
+                  },
+                });
+            
+                if (existingSubscription) {
+                  throw new Error('User already subscribed to the Author');
+                }
+            
+                await prisma.subscribersOnAuthors.create({
+                  data: {
+                    subscriberId: userId,
+                    authorId: authorId,
+                  },
+                });
+            
+                return "Subscription created successfully"; 
+              },
         },
 
         unsubscribeFrom: {
@@ -263,8 +292,15 @@ const Mutation = new GraphQLObjectType({
                 userId: { type: new GraphQLNonNull(UUIDType) },
                 authorId: { type: new GraphQLNonNull(UUIDType) },
             },
-            resolve(parent, args, { prisma }) {
-                //TODO
+            async resolve(parent, args, { prisma }) {
+                await prisma.subscribersOnAuthors.delete({
+                    where: {
+                        subscriberId_authorId: {
+                            subscriberId: args.userId,
+                            authorId: args.authorId,
+                        },
+                    },
+                });
             },
         },
 
