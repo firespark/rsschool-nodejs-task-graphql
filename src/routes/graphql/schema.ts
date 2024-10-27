@@ -315,29 +315,7 @@ const Mutation = new GraphQLObjectType({
             },
             async resolve(parent, args, { prisma }) {
                 const { userId, authorId } = args;
-            
-                const user = await prisma.user.findUnique({ where: { id: userId } });
-                const author = await prisma.user.findUnique({ where: { id: authorId } });
-            
-                if (!user || !author) {
-                  //throw new Error('User or Author not found');
-                  return null;
-                }
 
-                const existingSubscription = await prisma.subscribersOnAuthors.findUnique({
-                  where: {
-                    subscriberId_authorId: {
-                      subscriberId: userId,
-                      authorId: authorId,
-                    },
-                  },
-                });
-            
-                if (existingSubscription) {
-                  //throw new Error('User already subscribed to the Author');
-                  return null;
-                }
-            
                 await prisma.subscribersOnAuthors.create({
                   data: {
                     subscriberId: userId,
@@ -364,6 +342,7 @@ const Mutation = new GraphQLObjectType({
                         },
                     },
                 });
+                return "Unsubscribed successfully"
             },
         },
 
