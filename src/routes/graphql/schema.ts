@@ -242,3 +242,79 @@ const Mutation = new GraphQLObjectType({
 
     },
 });
+
+
+// Queries
+
+const RootQuery = new GraphQLObjectType({
+    name: 'RootQueryType',
+    fields: {
+        memberTypes: {
+            type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(MemberType))),
+            resolve(parent, args, { prisma }) {
+                // TODO
+            },
+        },
+
+        memberType: {
+            type: MemberType,
+            args: {
+                id: { type: new GraphQLNonNull(MemberTypeIdEnum) },
+            },
+            resolve(parent, args, { prisma }) {
+                // TODO
+            },
+        },
+
+        users: {
+            type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(UserType))),
+            resolve(parent, args, { prisma }) {
+                // TODO
+            },
+        },
+
+        user: {
+            type: UserType,
+            args: {
+                id: { type: new GraphQLNonNull(UUIDType) },
+            },
+            resolve(parent, args, { prisma }) {
+                // TODO
+            },
+        },
+
+        posts: {
+            type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(PostType))),
+            resolve(parent, args, { prisma }) {
+                // TODO
+            },
+        },
+
+        post: {
+            type: PostType,
+            args: {
+                id: { type: new GraphQLNonNull(UUIDType) },
+            },
+            resolve(parent, args, { prisma }) {
+                // TODO
+            },
+        },
+
+        profiles: {
+            type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(ProfileType))),
+            resolve(parent, args, { prisma }) {
+                // TODO
+            },
+        },
+
+        profile: {
+            type: ProfileType,
+            args: {
+                id: { type: new GraphQLNonNull(UUIDType) },
+            },
+            resolve(parent, args, { prisma }) {
+                // TODO
+            },
+        },
+    },
+});
