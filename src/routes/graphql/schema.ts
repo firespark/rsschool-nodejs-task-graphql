@@ -117,3 +117,128 @@ const CreateUserInputType = new GraphQLInputObjectType({
         balance: { type: new GraphQLNonNull(GraphQLFloat) },
     },
 });
+
+
+// Mutations
+
+const Mutation = new GraphQLObjectType({
+    name: 'Mutation',
+    fields: {
+
+        createUser: {
+            type: new GraphQLNonNull(UserType),
+            args: {
+                dto: { type: new GraphQLNonNull(CreateUserInputType) },
+            },
+            resolve(parent, args, { prisma }) {
+                //TODO
+            },
+        },
+
+        createProfile: {
+            type: new GraphQLNonNull(ProfileType),
+            args: {
+                dto: { type: new GraphQLNonNull(CreateProfileInputType) },
+            },
+            resolve(parent, args, { prisma }) {
+                //TODO
+            },
+        },
+
+        createPost: {
+            type: new GraphQLNonNull(PostType),
+            args: {
+                dto: { type: new GraphQLNonNull(CreatePostInputType) },
+            },
+            resolve(parent, args, { prisma }) {
+                //TODO
+            },
+        },
+
+        changePost: {
+            type: new GraphQLNonNull(PostType),
+            args: {
+                id: { type: new GraphQLNonNull(UUIDType) },
+                dto: { type: new GraphQLNonNull(ChangePostInputType) },
+            },
+            resolve(parent, args, { prisma }) {
+                //TODO
+            },
+        },
+
+        changeProfile: {
+            type: new GraphQLNonNull(ProfileType),
+            args: {
+                id: { type: new GraphQLNonNull(UUIDType) },
+                dto: { type: new GraphQLNonNull(ChangeProfileInputType) },
+            },
+            resolve(parent, args, { prisma }) {
+                //TODO
+            },
+        },
+
+        changeUser: {
+            type: new GraphQLNonNull(UserType),
+            args: {
+                id: { type: new GraphQLNonNull(UUIDType) },
+                dto: { type: new GraphQLNonNull(ChangeUserInputType) },
+            },
+            resolve(parent, args, { prisma }) {
+                //TODO
+            },
+        },
+
+        deleteUser: {
+            type: new GraphQLNonNull(GraphQLString),
+            args: {
+                id: { type: new GraphQLNonNull(UUIDType) },
+            },
+            resolve(parent, args, { prisma }) {
+                //TODO
+            },
+        },
+
+        deletePost: {
+            type: new GraphQLNonNull(GraphQLString),
+            args: {
+                id: { type: new GraphQLNonNull(UUIDType) },
+            },
+            resolve(parent, args, { prisma }) {
+                //TODO
+            },
+        },
+
+        deleteProfile: {
+            type: new GraphQLNonNull(GraphQLString),
+            args: {
+                id: { type: new GraphQLNonNull(UUIDType) },
+            },
+            resolve(parent, args, { prisma }) {
+                //TODO
+            },
+        },
+
+        subscribeTo: {
+            type: new GraphQLNonNull(GraphQLString),
+            args: {
+                userId: { type: new GraphQLNonNull(UUIDType) },
+                authorId: { type: new GraphQLNonNull(UUIDType) },
+            },
+            resolve(parent, args, { prisma }) {
+                //TODO
+            },
+        },
+
+        unsubscribeFrom: {
+            type: new GraphQLNonNull(GraphQLString),
+            args: {
+                userId: { type: new GraphQLNonNull(UUIDType) },
+                authorId: { type: new GraphQLNonNull(UUIDType) },
+            },
+            resolve(parent, args, { prisma }) {
+                //TODO
+            },
+        },
+
+    },
+});
