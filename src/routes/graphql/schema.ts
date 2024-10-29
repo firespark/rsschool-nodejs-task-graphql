@@ -12,6 +12,7 @@ import {
 } from 'graphql';
 import { UUIDType } from './types/uuid.js';
 import { MemberTypeId } from '../member-types/schemas.js';
+import { parse, ResolveTree, simplify } from 'graphql-parse-resolve-info';
 
 // Types
 
@@ -44,19 +45,17 @@ const PostType = new GraphQLObjectType({
 const ProfileType = new GraphQLObjectType({
     name: 'Profile',
     fields: () => ({
-      id: { type: new GraphQLNonNull(UUIDType) },
-      isMale: { type: new GraphQLNonNull(GraphQLBoolean) },
-      yearOfBirth: { type: new GraphQLNonNull(GraphQLInt) }, 
-      memberType: {
-        type: new GraphQLNonNull(MemberType), 
-        async resolve(parent, args, { prisma }) {
-          return await prisma.memberType.findUnique({
-            where: { id: parent.memberTypeId }, 
-          });
+        id: { type: new GraphQLNonNull(UUIDType) },
+        isMale: { type: new GraphQLNonNull(GraphQLBoolean) },
+        yearOfBirth: { type: new GraphQLNonNull(GraphQLInt) },
+        memberType: {
+            type: new GraphQLNonNull(MemberType),
+            async resolve({ memberTypeId }, args, { memberTypeLoader }) {
+                return memberTypeLoader.load(memberTypeId);
+            },
         },
-      },
     }),
-  });
+});
 
 const UserType = new GraphQLObjectType({
     name: 'User',
@@ -66,62 +65,28 @@ const UserType = new GraphQLObjectType({
         balance: { type: new GraphQLNonNull(GraphQLFloat) },
         profile: {
             type: ProfileType,
-
-            async resolve(parent, args, { prisma }) {
-              return await prisma.profile.findUnique({
-                where: { userId: parent.id },
-              });
+            resolve: async ({ id }, args, { profileByUserIdLoader }) => {
+                return profileByUserIdLoader.load(id);
             },
-          },
-          posts: {
+        },
+        posts: {
             type: new GraphQLNonNull(new GraphQLList(PostType)),
-
-            async resolve(parent, args, { prisma }) {
-              return await prisma.post.findMany({
-                where: { authorId: parent.id },
-              });
+            resolve: async ({ id }, args, { postsByAuthorLoader }) => {
+                return postsByAuthorLoader.load(id);
             },
-          },
-          userSubscribedTo: {
+        },
+        userSubscribedTo: {
             type: new GraphQLNonNull(new GraphQLList(UserType)),
-
-            async resolve(parent, args, { prisma }) {
-              const subscribedTo = await prisma.user.findMany({
-                where: {
-                  subscribedToUser: {
-                    some: {
-                      subscriberId: parent.id,
-                    },
-                  },
-                },
-                include: {
-                  subscribedToUser: true,
-                },
-              });
-      
-              return subscribedTo;
+            resolve: async ({ userSubscribedTo }, args, { userLoader }) => {
+                return userSubscribedTo.map((subscribtion) => userLoader.load(subscribtion.authorId));
             },
-          },
-          subscribedToUser: {
+        },
+        subscribedToUser: {
             type: new GraphQLNonNull(new GraphQLList(UserType)),
-            
-            async resolve(parent, args, { prisma }) {
-              const subscribedToUser = await prisma.user.findMany({
-                where: {
-                  userSubscribedTo: {
-                    some: {
-                      authorId: parent.id,
-                    },
-                  },
-                },
-                include: {
-                  userSubscribedTo: true,
-                },
-              });
-      
-              return subscribedToUser;
+            resolve: async ({ subscribedToUser }, args, { userLoader }) => {
+                return subscribedToUser.map((subscribtion) => userLoader.load(subscribtion.subscriberId));
             },
-          },
+        },
     }),
 });
 
@@ -192,9 +157,9 @@ const Mutation = new GraphQLObjectType({
             args: {
                 dto: { type: new GraphQLNonNull(CreateUserInputType) },
             },
-            async resolve(parent, args, { prisma }) {
+            async resolve(parent, { dto }, { prisma }) {
                 return prisma.user.create({
-                    data: args.dto,
+                    data: dto,
                 });
             },
         },
@@ -204,9 +169,9 @@ const Mutation = new GraphQLObjectType({
             args: {
                 dto: { type: new GraphQLNonNull(CreateProfileInputType) },
             },
-            async resolve(parent, args, { prisma }) {
+            async resolve(parent, { dto }, { prisma }) {
                 return prisma.profile.create({
-                    data: args.dto,
+                    data: dto,
                 });
             },
         },
@@ -216,9 +181,9 @@ const Mutation = new GraphQLObjectType({
             args: {
                 dto: { type: new GraphQLNonNull(CreatePostInputType) },
             },
-            async resolve(parent, args, { prisma }) {
+            async resolve(parent, { dto }, { prisma }) {
                 return prisma.post.create({
-                    data: args.dto,
+                    data: dto,
                 });
             },
         },
@@ -229,10 +194,10 @@ const Mutation = new GraphQLObjectType({
                 id: { type: new GraphQLNonNull(UUIDType) },
                 dto: { type: new GraphQLNonNull(ChangePostInputType) },
             },
-            async resolve(parent, args, { prisma }) {
+            async resolve(parent, { id, dto }, { prisma }) {
                 return prisma.post.update({
-                    where: { id: args.id },
-                    data: args.dto,
+                    where: { id: id },
+                    data: dto,
                 });
             },
         },
@@ -243,10 +208,10 @@ const Mutation = new GraphQLObjectType({
                 id: { type: new GraphQLNonNull(UUIDType) },
                 dto: { type: new GraphQLNonNull(ChangeProfileInputType) },
             },
-            async resolve(parent, args, { prisma }) {
+            async resolve(parent, { id, dto }, { prisma }) {
                 return prisma.profile.update({
-                    where: { id: args.id },
-                    data: args.dto,
+                    where: { id: id },
+                    data: dto,
                 });
             },
         },
@@ -257,10 +222,10 @@ const Mutation = new GraphQLObjectType({
                 id: { type: new GraphQLNonNull(UUIDType) },
                 dto: { type: new GraphQLNonNull(ChangeUserInputType) },
             },
-            async resolve(parent, args, { prisma }) {
+            async resolve(parent, { id, dto }, { prisma }) {
                 return prisma.user.update({
-                    where: { id: args.id },
-                    data: args.dto,
+                    where: { id: id },
+                    data: dto,
                 });
             },
         },
@@ -270,9 +235,9 @@ const Mutation = new GraphQLObjectType({
             args: {
                 id: { type: new GraphQLNonNull(UUIDType) },
             },
-            async resolve(parent, args, { prisma }) {
+            async resolve(parent, { id }, { prisma }) {
                 await prisma.user.delete({
-                    where: { id: args.id },
+                    where: { id: id },
                 });
 
                 return "User successfully deleted";
@@ -284,9 +249,9 @@ const Mutation = new GraphQLObjectType({
             args: {
                 id: { type: new GraphQLNonNull(UUIDType) },
             },
-            async resolve(parent, args, { prisma }) {
+            async resolve(parent, { id }, { prisma }) {
                 await prisma.post.delete({
-                    where: { id: args.id },
+                    where: { id: id },
                 });
 
                 return "Post successfully deleted";
@@ -298,9 +263,9 @@ const Mutation = new GraphQLObjectType({
             args: {
                 id: { type: new GraphQLNonNull(UUIDType) },
             },
-            async resolve(parent, args, { prisma }) {
+            async resolve(parent, { id }, { prisma }) {
                 await prisma.profile.delete({
-                    where: { id: args.id },
+                    where: { id: id },
                 });
 
                 return "Profile successfully deleted";
@@ -313,18 +278,16 @@ const Mutation = new GraphQLObjectType({
                 userId: { type: new GraphQLNonNull(UUIDType) },
                 authorId: { type: new GraphQLNonNull(UUIDType) },
             },
-            async resolve(parent, args, { prisma }) {
-                const { userId, authorId } = args;
-
+            async resolve(parent, { userId, authorId }, { prisma }) {
                 await prisma.subscribersOnAuthors.create({
-                  data: {
-                    subscriberId: userId,
-                    authorId: authorId,
-                  },
+                    data: {
+                        subscriberId: userId,
+                        authorId: authorId,
+                    },
                 });
-            
-                return "Subscription created successfully"; 
-              },
+
+                return "Subscription created successfully";
+            },
         },
 
         unsubscribeFrom: {
@@ -333,12 +296,12 @@ const Mutation = new GraphQLObjectType({
                 userId: { type: new GraphQLNonNull(UUIDType) },
                 authorId: { type: new GraphQLNonNull(UUIDType) },
             },
-            async resolve(parent, args, { prisma }) {
+            async resolve(parent, { userId, authorId }, { prisma }) {
                 await prisma.subscribersOnAuthors.delete({
                     where: {
                         subscriberId_authorId: {
-                            subscriberId: args.userId,
-                            authorId: args.authorId,
+                            subscriberId: userId,
+                            authorId: authorId,
                         },
                     },
                 });
@@ -357,8 +320,13 @@ const RootQuery = new GraphQLObjectType({
     fields: {
         memberTypes: {
             type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(MemberType))),
-            resolve(parent, args, { prisma }) {
-                return prisma.memberType.findMany();
+            async resolve(parent, args, { prisma, memberTypeLoader }) {
+                const memberTypes = await prisma.memberType.findMany();
+                memberTypes.forEach((memberType) =>
+                    memberTypeLoader.prime(memberType.id, memberType),
+                );
+
+                return memberTypes;
             },
         },
 
@@ -367,24 +335,29 @@ const RootQuery = new GraphQLObjectType({
             args: {
                 id: { type: new GraphQLNonNull(MemberTypeIdEnum) },
             },
-            async resolve(parent, args, { prisma }) {
-                const memberType = await prisma.memberType.findUnique({
-                    where: { id: args.id },
-                });
-
-                if (!memberType) {
-                    //throw new Error('MemberType not found');
-                    return null;
-                }
-
-                return memberType;
+            async resolve(parent, { id }, { memberTypeLoader }) {
+                return memberTypeLoader.load(id);
             },
         },
 
         users: {
             type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(UserType))),
-            resolve(parent, args, { prisma }) {
-                return prisma.user.findMany();
+            async resolve(parent, args, { prisma, userLoader }, resolveInfo) {
+                const parsedInfo = parse(resolveInfo);
+                const { fields } = simplify(parsedInfo as ResolveTree, new GraphQLList(UserType));
+
+                const users = await prisma.user.findMany({
+                    include: {
+                        subscribedToUser: 'subscribedToUser' in fields,
+                        userSubscribedTo: 'userSubscribedTo' in fields,
+                    },
+                });
+
+                users.forEach((user) => {
+                    userLoader.prime(user.id, user);
+                });
+
+                return users;
             },
         },
 
@@ -393,32 +366,20 @@ const RootQuery = new GraphQLObjectType({
             args: {
                 id: { type: new GraphQLNonNull(UUIDType) },
             },
-            async resolve(parent, args, { prisma }) {
-                const user = await prisma.user.findUnique({
-                    where: { id: args.id },
-                    include: {
-                        profile: {
-                          include: {
-                            memberType: true, // Загружаем связанный тип членства (memberType)
-                          },
-                        },
-                        posts: true, // Загружаем связанные посты
-                      },
-                });
-
-                if (!user) {
-                    //throw new Error('User not found');
-                    return null;
-                }
-
-                return user;
+            async resolve(parent, { id }, { userLoader }) {
+                return userLoader.load(id);
             },
         },
 
         posts: {
             type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(PostType))),
-            resolve(parent, args, { prisma }) {
-                return prisma.post.findMany();
+            async resolve(parent, args, { prisma, postLoader }) {
+                const posts = await prisma.post.findMany();
+                posts.forEach((post) => {
+                    postLoader.prime(post.id, post);
+                });
+
+                return posts;
             },
         },
 
@@ -427,24 +388,20 @@ const RootQuery = new GraphQLObjectType({
             args: {
                 id: { type: new GraphQLNonNull(UUIDType) },
             },
-            async resolve(parent, args, { prisma }) {
-                const post = await prisma.post.findUnique({
-                    where: { id: args.id },
-                });
-
-                if (!post) {
-                    //throw new Error('Post not found');
-                    return null;
-                }
-
-                return post;
+            async resolve(parent, { id }, { postLoader }) {
+                return postLoader.load(id);
             },
         },
 
         profiles: {
             type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(ProfileType))),
-            resolve(parent, args, { prisma }) {
-                return prisma.profile.findMany();
+            async resolve(parent, args, { prisma, profileByIdLoader }) {
+                const profiles = await prisma.profile.findMany();
+                profiles.forEach((profile) => {
+                    profileByIdLoader.prime(profile.id, profile);
+                });
+
+                return profiles;
             },
         },
 
@@ -453,17 +410,8 @@ const RootQuery = new GraphQLObjectType({
             args: {
                 id: { type: new GraphQLNonNull(UUIDType) },
             },
-            async resolve(parent, args, { prisma }) {
-                const profile = await prisma.profile.findUnique({
-                    where: { id: args.id },
-                });
-
-                if (!profile) {
-                    //throw new Error('Profile not found');
-                    return null;
-                }
-
-                return profile;
+            async resolve(parent, { id }, { profileByIdLoader }) {
+                return profileByIdLoader.load(id);
             },
         },
     },
